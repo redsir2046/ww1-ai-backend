@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8" />
+  <title>第一次世界大戰 AI 問答平台</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #0f172a;
+      --bg-soft: #111827;
+      --accent: #2563eb;
+      --accent-soft: #1d4ed8;
+      --accent-light: #dbeafe;
+      --border: #1f2937;
+      --text-main: #e5e7eb;
+      --text-muted: #9ca3af;
+      --user-bubble: #2563eb;
+      --bot-bubble: #111827;
+      --radius-lg: 18px;
+      --radius-sm: 10px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        "Noto Sans TC", sans-serif;
+      background: radial-gradient(circle at top, #1f2937, #020617 55%);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+    }
+
+    .app-shell {
+      width: 100%;
+      max-width: 1100px;
+      margin: 24px;
+      background: linear-gradient(135deg, #020617 0%, #020617 55%, #111827 100%);
+      border-radius: 24px;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      box-shadow:
+        0 24px 60px rgba(15, 23, 42, 0.8),
+        0 0 0 1px rgba(15, 23, 42, 0.9);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .header {
+      padding: 18px 22px 12px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .header-main {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .title-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo-pill {
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 10%, #93c5fd, #1d4ed8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #eff6ff;
+      font-weight: 700;
+      font-size: 16px;
+      box-shadow: 0 0 0 1px rgba(191, 219, 254, 0.4);
+    }
+
+    .title {
+      font-size: 1.15rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .subtitle {
+      font-size: 0.87rem;
+      color: var(--text-muted);
+    }
+
+    .badge {
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(129, 140, 248, 0.7);
+      color: #c7d2fe;
+      background: radial-gradient(circle at top left, #312e81 0%, #0b1120 65%);
+      white-space: nowrap;
+    }
+
+    .main {
+      display: grid;
+      grid-template-columns: minmax(0, 1.8fr) minmax(0, 1.2fr);
+      gap: 0;
+      min-height: 480px;
+    }
+
+    @media (max-width: 860px) {
+      .main {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    /* 聊天區 */
+
+    .chat-panel {
+      border-right: 1px solid rgba(148, 163, 184, 0.16);
+      display: flex;
+      flex-direction: column;
+      background: radial-gradient(circle at top left, #111827, #020617);
+    }
+
+    @media (max-width: 860px) {
+      .chat-panel {
+        border-right: none;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+      }
+    }
+
+    .chat-scroll {
+      flex: 1;
+      padding: 14px 18px 10px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .msg-row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+    }
+
+    .msg-row.user {
+      justify-content: flex-end;
+    }
+
+    .avatar {
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+      margin-top: 4px;
+    }
+
+    .avatar.user {
+      background: radial-gradient(circle at 30% 10%, #f97316, #c2410c);
+      color: #fffbeb;
+    }
+
+    .avatar.bot {
+      background: radial-gradient(circle at 30% 10%, #38bdf8, #0ea5e9);
+      color: #ecfeff;
+    }
+
+    .bubble {
+      max-width: 78%;
+      padding: 9px 11px;
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      line-height: 1.5;
+      word-wrap: break-word;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.55);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    .user .bubble {
+      background: var(--user-bubble);
+      color: #eff6ff;
+      border-bottom-right-radius: 4px;
+    }
+
+    .bot .bubble {
+      background: var(--bot-bubble);
+      color: var(--text-main);
+      border-bottom-left-radius: 4px;
+    }
+
+    .bubble small {
+      display: block;
+      margin-top: 4px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .input-panel {
+      padding: 10px 16px 14px;
+      border-top: 1px solid rgba(148, 163, 184, 0.2);
+      background: linear-gradient(to bottom, #020617, #020617);
+    }
+
+    .input-box {
+      background: rgba(15, 23, 42, 0.9);
+      border-radius: 14px;
+      border: 1px solid rgba(55, 65, 81, 0.9);
+      padding: 8px 10px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+    }
+
+    textarea {
+      flex: 1;
+      border-radius: 10px;
+      border: none;
+      padding: 6px 8px;
+      font-size: 0.9rem;
+      font-family: inherit;
+      resize: none;
+      background: transparent;
+      color: var(--text-main);
+      outline: none;
+      max-height: 120px;
+    }
+
+    textarea::placeholder {
+      color: #6b7280;
+    }
+
+    .btn {
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      padding: 7px 14px;
+      white-space: nowrap;
+      transition: background 0.15s ease, transform 0.05s ease,
+        box-shadow 0.15s ease, opacity 0.1s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #eff6ff;
+      box-shadow: 0 10px 25px rgba(37, 99, 235, 0.55);
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-soft);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: #111827;
+      color: var(--text-muted);
+      border: 1px solid rgba(75, 85, 99, 0.7);
+    }
+
+    .btn-secondary:hover {
+      background: #020617;
+      color: #e5e7eb;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: default;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .status-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      padding: 0 2px;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      margin-right: 5px;
+      display: inline-block;
+      background: #22c55e;
+      box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.25);
+    }
+
+    .status-dot.offline {
+      background: #f97316;
+      box-shadow: 0 0 0 4px rgba(248, 113, 113, 0.25);
+    }
+
+    /* 側邊說明 */
+
+    .side-panel {
+      background: radial-gradient(circle at top right, #111827, #020617);
+      padding: 14px 16px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .side-section {
+      background: rgba(15, 23, 42, 0.95);
+      border-radius: 16px;
+      border: 1px solid rgba(55, 65, 81, 0.95);
+      padding: 10px 12px 12px;
+    }
+
+    .side-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .side-title span.icon {
+      font-size: 0.95rem;
+    }
+
+    .side-text {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .pill-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .pill {
+      font-size: 0.78rem;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      color: #e5e7eb;
+      background: rgba(15, 23, 42, 0.9);
+    }
+
+    .shortcut-list {
+      list-style: none;
+      padding: 0;
+      margin: 4px 0 0;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .shortcut-list li {
+      margin-bottom: 4px;
+    }
+
+    .kbd {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 18px;
+      padding: 1px 4px;
+      border-radius: 4px;
+      border: 1px solid rgba(148, 163, 184, 0.8);
+      font-size: 0.72rem;
+      color: #e5e7eb;
+      background: #020617;
+      margin: 0 2px;
+    }
+
+    .footer-note {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .footer-note strong {
+      color: #e5e7eb;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="header">
+      <div class="header-main">
+        <div class="title-row">
+          <div class="logo-pill">W1</div>
+          <div class="title">第一次世界大戰 · AI 問答平台</div>
+        </div>
+        <div class="subtitle">
+          根據老師提供的一戰知識庫，模擬香港初中世界歷史老師為你解答。
+        </div>
+      </div>
+      <div class="badge">Teacher Mode · WWI Causes</div>
+    </header>
+
+    <main class="main">
+      <!-- 左：聊天區 -->
+      <section class="chat-panel">
+        <div id="chatScroll" class="chat-scroll">
+          <!-- 歡迎訊息 -->
+        </div>
+
+        <div class="input-panel">
+          <div class="input-box">
+            <div class="input-row">
+              <textarea
+                id="questionInput"
+                rows="1"
+                placeholder="輸入你的問題，例如：『一戰的長期（遠因）和直接導火線有何分別？』"
+              ></textarea>
+              <button id="sendBtn" class="btn btn-primary">
+                <span>發送</span> <span>➤</span>
+              </button>
+            </div>
+            <div class="status-line">
+              <div id="statusText">
+                <span id="statusDot" class="status-dot"></span>
+                AI 已就緒，可開始提問。
+              </div>
+              <button id="clearBtn" class="btn btn-secondary">清除對話</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 右：說明區 -->
+      <aside class="side-panel">
+        <div class="side-section">
+          <div class="side-title">
+            <span class="icon">📝</span> 推薦提問方式
+          </div>
+          <div class="side-text">
+            試試這樣問：
+            <div class="pill-list">
+              <span
+                class="pill"
+                data-suggest="用簡單句子解釋：為何說軍備競賽是一戰的重要遠因？"
+                >軍備競賽有甚麼影響？</span
+              >
+              <span
+                class="pill"
+                data-suggest="比較三國同盟和三國協約在成員和目的上的分別。"
+                >三國同盟 vs 三國協約</span
+              >
+              <span
+                class="pill"
+                data-suggest="為甚麼巴爾幹半島被稱為『歐洲火藥庫』？請用 2–3 句說明。"
+                >巴爾幹「火藥庫」原因</span
+              >
+              <span
+                class="pill"
+                data-suggest="請用表格式或分點方式，總結一戰四個主要遠因。"
+                >總結四大遠因</span
+              >
+            </div>
+          </div>
+        </div>
+
+        <div class="side-section">
+          <div class="side-title">
+            <span class="icon">🎓</span> 使用提醒（給學生）
+          </div>
+          <div class="side-text">
+            <ul class="shortcut-list">
+              <li>• AI 的答案是根據老師提供的教材整理，<strong>並非考評局官方答案</strong>。</li>
+              <li>• 如答案與課本不同，請先以老師講解／教材為準。</li>
+              <li>• 不要輸入個人資料（姓名、電話、學號等）。</li>
+              <li>• 可把 AI 回答當作「初稿」，再自行整理重點做筆記。</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="side-section">
+          <div class="side-title">
+            <span class="icon">⌨️</span> 小技巧
+          </div>
+          <div class="side-text">
+            <ul class="shortcut-list">
+              <li>
+                • 編輯問題完畢後，可按
+                <span class="kbd">Ctrl</span> + <span class="kbd">Enter</span>
+                （macOS: <span class="kbd">⌘</span> + <span class="kbd">Enter</span>）
+                直接發送。
+              </li>
+              <li>• 可以分兩次提問：先問「解釋」，再問「幫我做總結」。</li>
+              <li>• 如 AI 說「資料不足」，可換一個更貼近課本用語的問法。</li>
+            </ul>
+            <div class="footer-note">
+              <strong>老師提示：</strong>你也可以用這平台設計堂課導入提問、小組討論問題或延伸閱讀任務。
+            </div>
+          </div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <script>
+    // ⚙️ 請在這裡改成你在 Render 的實際後端網址（必須包含 /api/ask）
+    // 例子：
+    // const BACKEND_URL = "https://ww1-ai-backend.onrender.com/api/ask";
+    const BACKEND_URL = "https://ww1-ai-backend.onrender.com/api/ask";
+
+    const chatScroll = document.getElementById("chatScroll");
+    const questionInput = document.getElementById("questionInput");
+    const sendBtn = document.getElementById("sendBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const statusText = document.getElementById("statusText");
+    const statusDot = document.getElementById("statusDot");
+
+    let isSending = false;
+
+    function appendMessage(role, text) {
+      const row = document.createElement("div");
+      row.className = `msg-row ${role}`;
+
+      const avatar = document.createElement("div");
+      avatar.className = `avatar ${role}`;
+      avatar.textContent = role === "user" ? "你" : "AI";
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+      bubble.textContent = text;
+
+      row.appendChild(role === "user" ? bubble : avatar);
+      row.appendChild(role === "user" ? avatar : bubble);
+
+      chatScroll.appendChild(row);
+      chatScroll.scrollTop = chatScroll.scrollHeight;
+    }
+
+    function setStatus(message, online = true) {
+      statusText.firstChild &&
+        statusText.removeChild(statusText.firstChild); // 清除原有文字
+      const dot = statusDot;
+      dot.classList.toggle("offline", !online);
+
+      const span = document.createElement("span");
+      span.textContent = " " + message;
+      statusText.appendChild(dot);
+      statusText.appendChild(span);
+    }
+
+    async function sendQuestion() {
+      const question = questionInput.value.trim();
+      if (!question || isSending) return;
+
+      appendMessage("user", question);
+      questionInput.value = "";
+      resizeTextarea();
+
+      isSending = true;
+      sendBtn.disabled = true;
+      setStatus("AI 正在思考中⋯⋯", true);
+
+      try {
+        const response = await fetch(BACKEND_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ question }),
+        });
+
+        if (!response.ok) {
+          appendMessage(
+            "bot",
+            "抱歉，伺服器暫時未能處理你的問題。（HTTP " +
+              response.status +
+              "）"
+          );
+          setStatus("伺服器回應錯誤，請稍後再試。", false);
+        } else {
+          const data = await response.json();
+          appendMessage("bot", data.answer || "抱歉，未能取得回答內容。");
+          setStatus("AI 已就緒，可繼續提問。", true);
+        }
+      } catch (err) {
+        console.error(err);
+        appendMessage(
+          "bot",
+          "抱歉，無法連線到後端伺服器，請檢查網絡或通知老師。"
+        );
+        setStatus("連線錯誤，請稍後重試。", false);
+      } finally {
+        isSending = false;
+        sendBtn.disabled = false;
+      }
+    }
+
+    function resizeTextarea() {
+      questionInput.style.height = "auto";
+      const newHeight = Math.min(questionInput.scrollHeight, 120);
+      questionInput.style.height = newHeight + "px";
+    }
+
+    // 事件綁定
+    sendBtn.addEventListener("click", sendQuestion);
+    clearBtn.addEventListener("click", () => {
+      chatScroll.innerHTML = "";
+      showWelcomeMessage();
+      setStatus("AI 已就緒，可開始提問。", true);
+    });
+
+    questionInput.addEventListener("input", resizeTextarea);
+
+    questionInput.addEventListener("keydown", (e) => {
+      if (
+        (e.key === "Enter" || e.key === "Return") &&
+        (e.ctrlKey || e.metaKey)
+      ) {
+        e.preventDefault();
+        sendQuestion();
+      }
+    });
+
+    // 點按右邊的建議問題
+    document.querySelectorAll("[data-suggest]").forEach((pill) => {
+      pill.style.cursor = "pointer";
+      pill.addEventListener("click", () => {
+        questionInput.value = pill.getAttribute("data-suggest");
+        resizeTextarea();
+        questionInput.focus();
+      });
+    });
+
+    function showWelcomeMessage() {
+      appendMessage(
+        "bot",
+        "你好，我是一位專門講解第一次世界大戰的 AI 老師。\n" +
+          "你可以問我：\n" +
+          "．一戰的遠因有甚麼？\n" +
+          "．為甚麼巴爾幹半島被稱為「歐洲火藥庫」？\n" +
+          "．軍備競賽如何加深列強之間的矛盾？\n" +
+          "我會盡量根據老師提供的教材來回答你。"
+      );
+    }
+
+    // 初始化
+    showWelcomeMessage();
+  </script>
+</body>
+</html>
