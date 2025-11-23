@@ -70,7 +70,7 @@ app.post("/api/ask", async (req, res) => {
 
   try {
     const completion = await client.chat.completions.create({
-      model: "gpt-4.1-mini", // 如有需要可改為你帳戶有的模型，例如 "gpt-4o-mini"
+      model: "gpt-4o-mini", // 如有需要可改為你帳戶有的模型，例如 "gpt-4o-mini"
       messages: [
         {
           role: "system",
